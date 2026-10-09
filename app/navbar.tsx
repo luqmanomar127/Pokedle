@@ -1,4 +1,8 @@
-export default function Navbar() {
+type navbarProps = {
+    onReset: () => void;
+}
+
+export default function Navbar({onReset}: navbarProps) {
     return (
               <nav className = "navbar">
         <ul>
@@ -18,7 +22,7 @@ export default function Navbar() {
                     <li><a href="#"><span className="dropdown1_icon">&#9670;</span> Gen 6</a></li>
                 </ul>
             </li>
-            <li><a href="#">Reset</a></li>
+            <li><a href="#" onClick={(e) => { e.preventDefault(); onReset(); }}>Reset</a></li>
         </ul>
     </nav>
     )
