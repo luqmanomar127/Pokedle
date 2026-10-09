@@ -79,11 +79,6 @@ useEffect(() => {
     }
 }
 
-
-
-
-
-  
   return (
     <div>
       <nav className = "navbar">
