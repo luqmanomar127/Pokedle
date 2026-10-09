@@ -9,29 +9,52 @@ type Pokemon = {
   generation: string;
   type1: string;
   type2: string;
+  evolution: number;
   sprite: string;
 }
 
-async function getPokemonData(name: string) {
+function getEvolutionStage(chain: any, speciesName: string, depth = 1): number | null {
+  if (chain.species.name === speciesName) {
+    return depth;
+  }
+
+  for (const next of chain.evolves_to) {
+    const found = getEvolutionStage(next, speciesName, depth + 1);
+    if (found) {
+      return (found);
+    }
+  }
+  return null;
+}
+
+async function getPokemonData(name: string | number) {
     const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`);
+    const data = await response.json();
 
     if(!response.ok){
         throw new Error("Could not fetch resource");
     }
 
-    const data = await response.json();
-
     const speciesResponse = await fetch(data.species.url);
     const speciesData = await speciesResponse.json();
+
+    let evolution = 1;
+    if (speciesData.evolution_chain) {
+      const evolutionResponse = await fetch(speciesData.evolution_chain.url);
+      const evolutionData = await evolutionResponse.json();
+      evolution = getEvolutionStage(evolutionData.chain, speciesData.name) ?? 1;
+    }
 
     return {
         name: data.name,
         generation: speciesData.generation.name.replace("generation-", "Gen ").toUpperCase(),
         type1: data.types[0]?.type.name,
         type2: data.types[1]?.type.name || "",
+        evolution,
         sprite: data.sprites.front_shiny || data.sprites.front_default
     };
 }
+
 
 export default function Home() {
   const secretPokemon = useRef<Pokemon | null>(null);
@@ -47,6 +70,13 @@ export default function Home() {
     } catch (error) {
         console.error(error);
     }
+}
+
+function resetGame() {
+  setGuesses([]);
+  setSprite("");
+  setPokemonName("");
+  startGame();
 }
 
 useEffect(() => {
@@ -70,7 +100,7 @@ useEffect(() => {
 
         console.log(results);
 
-        setGuesses((prev) => [...prev, pokemonData]);
+        setGuesses((prev) => [pokemonData, ...prev]);
 
         if (pokemonData.name === secretPokemon.current!.name) {
             console.log("YOU WON!")
@@ -82,14 +112,14 @@ useEffect(() => {
 
   return (
     <div>
-      <Navbar/>
+      <Navbar onReset={resetGame}/>
 
     <div className="div1">
         <h2>Welcome to Pokedle!</h2>
     </div>
     <div className="div2">
         <div className="input_row">
-            <input type="text" className="input" id="pokemonName" placeholder="Enter Pokemon name" value={pokemonName} onChange={(e) => setPokemonName(e.target.value)}/>
+            <input type="text" className="input" id="pokemonName" placeholder="Enter Pokemon name" value={pokemonName} onChange={(e) => setPokemonName(e.target.value)} onKeyDown={(e) => {if (e.key === "Enter") fetchData();}}/>
 
             <div className="box-button">
                 <button className="button" onClick={fetchData}><span>Fetch Pokemon!</span></button>
@@ -108,6 +138,9 @@ useEffect(() => {
               </span>
               <span className={guess.type2 === secretPokemon.current?.type2 ? "correct" : "wrong"}>
                 {guess.type2 || "None"}
+              </span>
+              <span className={guess.evolution === secretPokemon.current?.evolution ? "correct" : "wrong"}>
+                {guess.evolution}
               </span>
             </div>
           ))}
