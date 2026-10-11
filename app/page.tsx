@@ -79,9 +79,7 @@ function resetGame() {
   startGame();
 }
 
-useEffect(() => {
-  startGame();
-}, []);
+useEffect(() => {startGame();}, []);
   
   async function fetchData(){
     try{
