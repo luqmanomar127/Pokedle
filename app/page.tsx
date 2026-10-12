@@ -61,6 +61,7 @@ export default function Home() {
   const [pokemonName, setPokemonName] = useState("");
   const [guesses, setGuesses] = useState<Pokemon[]>([]);
   const [sprite, setSprite] = useState("");
+  const [allNames, setAllNames] = useState<string[]>([]);
   
   async function startGame() {
     try {
@@ -80,6 +81,18 @@ function resetGame() {
 }
 
 useEffect(() => {startGame();}, []);
+
+useEffect(() => { async function loadNames() {
+  try {
+    const response = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1025");
+    const data = await response.json();
+    setAllNames(data.results.map((p: {name: string}) => p.name));
+  } catch (error) {
+    console.log(error);
+  }
+}
+  loadNames();
+}, []);
   
   async function fetchData(){
     try{
@@ -108,6 +121,9 @@ useEffect(() => {startGame();}, []);
     }
 }
 
+const input = pokemonName.toLowerCase();
+const suggestions = input ? allNames.filter((n) => n.startsWith(input) && n !== input).slice(0, 8) : [];
+
   return (
     <div>
       <Navbar onReset={resetGame}/>
@@ -117,8 +133,10 @@ useEffect(() => {startGame();}, []);
     </div>
     <div className="div2">
         <div className="input_row">
+          <div className="input_wrap">
             <input type="text" className="input" id="pokemonName" placeholder="Enter Pokemon name" value={pokemonName} onChange={(e) => setPokemonName(e.target.value)} onKeyDown={(e) => {if (e.key === "Enter") fetchData();}}/>
-
+            {suggestions.length > 0 && (<ul className="suggestions"> {suggestions.map((name) => (<li key={name} onClick={() => setPokemonName(name)}> {name}</li>))}</ul>)}
+          </div>
             <div className="box-button">
                 <button className="button" onClick={fetchData}><span>Fetch Pokemon!</span></button>
             </div>
