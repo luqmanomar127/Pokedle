@@ -3,58 +3,7 @@
 import React, {useEffect, useRef, useState} from "react";
 import "./globals.css";
 import Navbar from "./navbar";
-
-type Pokemon = {
-  name: string;
-  generation: string;
-  type1: string;
-  type2: string;
-  evolution: number;
-  sprite: string;
-}
-
-function getEvolutionStage(chain: any, speciesName: string, depth = 1): number | null {
-  if (chain.species.name === speciesName) {
-    return depth;
-  }
-
-  for (const next of chain.evolves_to) {
-    const found = getEvolutionStage(next, speciesName, depth + 1);
-    if (found) {
-      return (found);
-    }
-  }
-  return null;
-}
-
-async function getPokemonData(name: string | number) {
-    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`);
-    const data = await response.json();
-
-    if(!response.ok){
-        throw new Error("Could not fetch resource");
-    }
-
-    const speciesResponse = await fetch(data.species.url);
-    const speciesData = await speciesResponse.json();
-
-    let evolution = 1;
-    if (speciesData.evolution_chain) {
-      const evolutionResponse = await fetch(speciesData.evolution_chain.url);
-      const evolutionData = await evolutionResponse.json();
-      evolution = getEvolutionStage(evolutionData.chain, speciesData.name) ?? 1;
-    }
-
-    return {
-        name: data.name,
-        generation: speciesData.generation.name.replace("generation-", "Gen ").toUpperCase(),
-        type1: data.types[0]?.type.name,
-        type2: data.types[1]?.type.name || "",
-        evolution,
-        sprite: data.sprites.front_shiny || data.sprites.front_default
-    };
-}
-
+import {getPokemonData, type Pokemon} from "./lib/pokemon"
 
 export default function Home() {
   const secretPokemon = useRef<Pokemon | null>(null);
@@ -63,11 +12,18 @@ export default function Home() {
   const [sprite, setSprite] = useState("");
   const [allNames, setAllNames] = useState<string[]>([]);
   
-  async function startGame() {
+  async function startGame(random = false) {
     try {
+      if (random) {
         const randomPokemon = Math.floor(Math.random() * 1025) + 1;
         secretPokemon.current = await getPokemonData(randomPokemon);
         console.log(secretPokemon.current.name);
+      } else {
+        const response = await fetch("./api/daily");
+        const data = await response.json();
+        secretPokemon.current = data.pokemon;
+        console.log(secretPokemon.current?.name);
+      }
     } catch (error) {
         console.error(error);
     }
@@ -77,7 +33,7 @@ function resetGame() {
   setGuesses([]);
   setSprite("");
   setPokemonName("");
-  startGame();
+  startGame(true);
 }
 
 useEffect(() => {startGame();}, []);
